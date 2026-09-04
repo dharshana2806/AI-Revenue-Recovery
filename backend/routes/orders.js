@@ -136,12 +136,36 @@ router.get('/:orderId/check-status', async (req, res) => {
     if (!transaction) return res.status(404).json({ error: 'Transaction not found' });
 
     // Ask Razorpay directly: has this order actually been paid?
-    const payments = await razorpay.orders.fetchPayments(orderId);
-    const capturedPayment = payments.items.find((p) => p.status === 'captured');
+    // Check the recovery Payment Link if one was created.
+let razorpayPayments = [];
+let capturedPayment = null;
 
+if (transaction.recoveryLinkId) {
+  const link = await razorpay.paymentLink.fetch(transaction.recoveryLinkId);
+
+  razorpayPayments = link.payments || [];
+
+  if (link.status === 'paid') {
+    capturedPayment =
+      razorpayPayments.find((p) => p.status === 'captured') || {
+        id: null,
+        amount: link.amount_paid,
+      };
+  } else {
+    capturedPayment = razorpayPayments.find(
+      (p) => p.status === 'captured'
+    );
+  }
+} else {
+  const payments = await razorpay.orders.fetchPayments(orderId);
+  razorpayPayments = payments.items;
+  capturedPayment = razorpayPayments.find(
+    (p) => p.status === 'captured'
+  );
+}
     if (capturedPayment && transaction.status !== 'recovered') {
       transaction.status = 'recovered';
-      transaction.recoveredPaymentId = capturedPayment.id;
+      transaction.recoveredPaymentId = capturedPayment.id || null;
       transaction.recoveredAt = new Date();
       transaction.agentLog.push({
         action: 'payment_recovered',
@@ -150,7 +174,7 @@ router.get('/:orderId/check-status', async (req, res) => {
       await transaction.save();
     }
 
-    res.json({ transaction, razorpayPayments: payments.items });
+ res.json({ transaction, razorpayPayments });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
