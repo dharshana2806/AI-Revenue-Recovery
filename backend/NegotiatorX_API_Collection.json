@@ -1,0 +1,118 @@
+{
+  "info": {
+    "name": "SmartRecover / NegotiatorX API Collection",
+    "description": "Razorpay AI Buildathon Track 3 — AI Revenue Recovery. Pre-configured requests covering the full order recovery loop, B2B invoice negotiation, webhooks, and metrics.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000/api", "type": "string" },
+    { "key": "orderId", "value": "", "type": "string" },
+    { "key": "invoiceId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Config",
+      "item": [
+        {
+          "name": "Get Public Razorpay Key",
+          "request": { "method": "GET", "url": "{{baseUrl}}/config" }
+        }
+      ]
+    },
+    {
+      "name": "SmartRecover — Failed Payment Flow",
+      "item": [
+        {
+          "name": "1. Create Order",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/orders",
+            "body": { "mode": "raw", "raw": "{\n  \"customerName\": \"Test User\",\n  \"customerEmail\": \"test@example.com\",\n  \"amount\": 499\n}" }
+          }
+        },
+        {
+          "name": "2. Simulate Payment Failure",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/orders/{{orderId}}/simulate-failure",
+            "body": { "mode": "raw", "raw": "{\n  \"errorCode\": \"GATEWAY_ERROR\"\n}" }
+          }
+        },
+        {
+          "name": "3. Run AI Recovery Agent",
+          "request": { "method": "POST", "url": "{{baseUrl}}/orders/{{orderId}}/recover" }
+        },
+        {
+          "name": "4. List All Transactions",
+          "request": { "method": "GET", "url": "{{baseUrl}}/orders" }
+        }
+      ]
+    },
+    {
+      "name": "NegotiatorX — B2B Invoice Flow",
+      "item": [
+        {
+          "name": "1. Create Invoice",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/invoices",
+            "body": { "mode": "raw", "raw": "{\n  \"clientName\": \"Acme Traders Pvt Ltd\",\n  \"clientEmail\": \"finance@acmetraders.com\",\n  \"amount\": 45000,\n  \"dueDate\": \"2026-08-01T00:00:00.000Z\",\n  \"daysOverdue\": 12\n}" }
+          }
+        },
+        {
+          "name": "2. Get Canned Reply Options",
+          "request": { "method": "GET", "url": "{{baseUrl}}/invoices/reply-options" }
+        },
+        {
+          "name": "3. Simulate Client Reply",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/invoices/{{invoiceId}}/simulate-reply",
+            "body": { "mode": "raw", "raw": "{\n  \"replyKey\": \"cant_pay_full\"\n}" }
+          }
+        },
+        {
+          "name": "4. Restructure / Execute Agent Decision",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/invoices/{{invoiceId}}/restructure",
+            "body": { "mode": "raw", "raw": "{\n  \"action\": \"offer_partial_payment\"\n}" }
+          }
+        },
+        {
+          "name": "5. List All Invoices",
+          "request": { "method": "GET", "url": "{{baseUrl}}/invoices" }
+        }
+      ]
+    },
+    {
+      "name": "Webhooks",
+      "item": [
+        {
+          "name": "Simulate payment.captured Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-razorpay-signature", "value": "test_signature_skip_if_no_secret_set" }
+            ],
+            "url": "{{baseUrl}}/webhooks/razorpay",
+            "body": { "mode": "raw", "raw": "{\n  \"event\": \"payment.captured\",\n  \"payload\": {\n    \"payment\": {\n      \"entity\": {\n        \"id\": \"pay_test_manual123\",\n        \"order_id\": \"{{orderId}}\",\n        \"amount\": 49900\n      }\n    }\n  }\n}" },
+            "description": "Note: real webhook signature verification will reject this unless RAZORPAY_WEBHOOK_SECRET is unset in your local .env for testing purposes. Use Razorpay's own webhook simulator for signature-accurate testing."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Metrics",
+      "item": [
+        { "name": "Get Dashboard Metrics", "request": { "method": "GET", "url": "{{baseUrl}}/metrics" } }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>SmartRecover — Live Checkout</title>
+<link rel="stylesheet" href="style.css" />
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body>
+  <header>
+    <h1>SmartRecover — Live Checkout</h1>
+    <p class="subtitle">This opens Razorpay's REAL test checkout. Using a genuine decline test card here fires a real payment.failed webhook — no simulation.</p>
+  </header>
+
+  <section class="demo-controls">
+    <h2>Step 1: Create a real order</h2>
+    <div class="form-row">
+      <input id="custName" placeholder="Customer name" value="Test User" />
+      <input id="custEmail" placeholder="Customer email" value="test@example.com" />
+      <input id="custAmount" placeholder="Amount (₹)" value="499" type="number" />
+      <button id="btnCreateOrder">Create Order</button>
+    </div>
+
+    <div class="form-row" id="payRow" style="display:none;">
+      <button id="btnOpenCheckout">Open Razorpay Checkout</button>
+    </div>
+
+    <div class="recovery-result" style="margin-top:16px;">
+      <h3>Test cards (use these in the real Razorpay checkout popup)</h3>
+      <p><strong>To trigger a genuine decline / payment.failed webhook:</strong><br/>
+      Card: <code>4000 0000 0000 0002</code> · Any future expiry · Any CVV</p>
+      <p><strong>To trigger a genuine success / payment.captured webhook:</strong><br/>
+      Card: <code>4111 1111 1111 1111</code> · Any future expiry · Any CVV</p>
+      <p class="hint">Both are official Razorpay test cards — the failure is a real bank-level decline in test mode, not something we're faking on our end.</p>
+    </div>
+  </section>
+
+  <section class="agent-log-section">
+    <h2>What happens next</h2>
+    <p>
+      1. If the card declines, Razorpay sends a real <code>payment.failed</code> webhook to our backend.<br/>
+      2. Our backend marks the transaction failed and the AI agent classifies the failure automatically.<br/>
+      3. Go to the main <a href="index.html">dashboard</a> — click "Run AI Recovery Agent" on that transaction to generate a recovery link.<br/>
+      4. Pay the recovery link with the success card — a real <code>payment.captured</code> webhook flips it to Recovered.
+    </p>
+  </section>
+
+  <script src="checkout.js"></script>
+</body>
+</html>

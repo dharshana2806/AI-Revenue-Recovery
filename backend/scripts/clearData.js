@@ -1,0 +1,12 @@
+require('dotenv').config(); 
+const dns = require('dns'); 
+dns.setServers(['8.8.8.8', '8.8.4.4']); 
+const mongoose = require('mongoose'); 
+const Transaction = require('../models/Transaction');
+ const Invoice = require('../models/Invoice'); 
+async function clear() { await mongoose.connect(process.env.MONGO_URI); 
+const txResult = await Transaction.deleteMany({}); 
+const invResult = await Invoice.deleteMany({});
+ console.log(`Cleared ${txResult.deletedCount} transactions.`); 
+console.log(`Cleared ${invResult.deletedCount} invoices.`); 
+await mongoose.disconnect(); } clear().catch((err) => { console.error(err); process.exit(1); });

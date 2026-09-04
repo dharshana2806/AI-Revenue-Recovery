@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>SmartRecover — AI Revenue Recovery</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header>
+    <h1>SmartRecover</h1>
+    <p class="subtitle">AI-powered failed payment recovery — live dashboard</p>
+  </header>
+
+  <section class="metrics" id="metrics">
+    <div class="metric-card">
+      <span class="metric-label">Revenue At Risk</span>
+      <span class="metric-value" id="metricAtRisk">₹0</span>
+    </div>
+    <div class="metric-card recovered">
+      <span class="metric-label">Revenue Recovered</span>
+      <span class="metric-value" id="metricRecovered">₹0</span>
+    </div>
+    <div class="metric-card">
+      <span class="metric-label">Recovery Rate</span>
+      <span class="metric-value" id="metricRate">0%</span>
+    </div>
+    <div class="metric-card">
+      <span class="metric-label">Successful Interventions</span>
+      <span class="metric-value" id="metricInterventions">0</span>
+    </div>
+  </section>
+
+  <section class="demo-controls">
+    <h2>Live Demo Controls</h2>
+    <div class="form-row">
+      <input id="custName" placeholder="Customer name" value="Test User" />
+      <input id="custEmail" placeholder="Customer email" value="test@example.com" />
+      <input id="custAmount" placeholder="Amount (₹)" value="499" type="number" />
+      <button id="btnCreateOrder">1. Create Order</button>
+    </div>
+
+    <div class="form-row" id="failureRow" style="display:none;">
+      <select id="errorCode">
+        <option value="GATEWAY_ERROR">Bank server unavailable</option>
+        <option value="BAD_REQUEST_ERROR">Card details incorrect</option>
+        <option value="PAYMENT_TIMED_OUT">Session timed out</option>
+        <option value="INSUFFICIENT_FUNDS">Insufficient funds</option>
+      </select>
+      <button id="btnSimulateFailure">2. Simulate Payment Failure</button>
+    </div>
+
+    <div class="form-row" id="recoverRow" style="display:none;">
+      <button id="btnRecover">3. Run AI Recovery Agent</button>
+    </div>
+
+    <div id="recoveryResult" class="recovery-result" style="display:none;">
+      <h3>🤖 Agent Output</h3>
+      <p id="recoveryMessage"></p>
+      <a id="recoveryLink" href="#" target="_blank" class="pay-link">Open Recovery Payment Link →</a>
+      <p class="hint">Pay with Razorpay test card: <code>4111 1111 1111 1111</code>, any future expiry, any CVV</p>
+      <button id="btnCheckStatus" style="margin-top:12px;">🔄 Check Payment Status</button>
+      <p class="hint" id="checkStatusResult"></p>
+    </div>
+  </section>
+
+  <section class="agent-log-section">
+    <h2>Agent Thought Log</h2>
+    <div id="agentLog" class="agent-log"></div>
+  </section>
+
+  <section class="demo-controls negotiator-section">
+    <h2>NegotiatorX — B2B Invoice Recovery</h2>
+    <div class="form-row">
+      <input id="invClientName" placeholder="Client / company name" value="Acme Traders Pvt Ltd" />
+      <input id="invClientEmail" placeholder="Client email" value="finance@acmetraders.com" />
+      <input id="invAmount" placeholder="Invoice amount (₹)" value="45000" type="number" />
+      <input id="invDaysOverdue" placeholder="Days overdue" value="12" type="number" />
+      <button id="btnCreateInvoice">1. Create Invoice</button>
+    </div>
+
+    <div class="form-row" id="replyRow" style="display:none;">
+      <select id="replyKey">
+        <option value="cant_pay_full">"Can't pay in full — cash flow is tight"</option>
+        <option value="need_extension">"Need 15 more days"</option>
+        <option value="dispute_amount">"The amount looks incorrect"</option>
+      </select>
+      <button id="btnSimulateReply">2. Simulate Client Reply</button>
+    </div>
+
+    <div class="form-row" id="restructureRow" style="display:none;">
+      <button id="btnRestructure">3. Execute Agent Decision</button>
+      <span id="approvalNotice" class="approval-notice" style="display:none;">⚠️ Above ₹2,00,000 — requires human approval (guardrail)</span>
+    </div>
+
+    <div id="negotiationResult" class="recovery-result" style="display:none;">
+      <h3>🤖 Negotiated Terms</h3>
+      <p id="negotiationMessage"></p>
+    </div>
+
+    <table id="invoicesTable" style="margin-top:16px;">
+      <thead>
+        <tr><th>Client</th><th>Amount</th><th>Risk Score</th><th>Status</th></tr>
+      </thead>
+      <tbody id="invoicesBody"></tbody>
+    </table>
+  </section>
+
+  <section class="transactions-section">
+    <h2>Transactions</h2>
+    <table id="transactionsTable">
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Reason</th>
+        </tr>
+      </thead>
+      <tbody id="transactionsBody"></tbody>
+    </table>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>
