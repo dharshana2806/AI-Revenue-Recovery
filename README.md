@@ -36,7 +36,7 @@ Submission write-up: `backend/SUBMISSION.md`
 - **Lint/format configs** — `.eslintrc.json` + `.prettierrc` in both `backend/` and `frontend/`
 - **One-click deploy** — `render.yaml` blueprint plus deploy badges in `backend/README.md` (update the GitHub username placeholder once you push)
 
-## What's Real vs. What's Controlled (be honest with judges about this)
+## What's Real vs. What's Controlled 
 
 **Fully real, no simulation:**
 - Order creation, Payment Links, Invoices — all real Razorpay Test Mode API calls
