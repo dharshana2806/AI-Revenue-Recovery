@@ -1,50 +1,74 @@
-# SmartRecover — Complete Project Bundle
-### Razorpay AI Buildathon · Track 3: AI Revenue Recovery
+# SmartRecover
+
+AI-assisted recovery for failed payments and overdue B2B invoices, built on Razorpay.
+
+## What it does
+
+Payments fail — cards decline, banks time out, gateways error out — and once a payment fails, most systems simply log it and stop. SmartRecover picks up from there:
+
+- **Recovery Agent** — when a payment fails, classifies the failure reason, generates a fresh Razorpay Payment Link, and drafts a short recovery message for the customer. When the customer pays, the transaction is verified directly against Razorpay and marked recovered.
+- **NegotiatorX** — for overdue B2B invoices, scores risk from the amount and days overdue, interprets the client's response, and proposes a bounded settlement (e.g. splitting the invoice into partial payments) instead of a generic reminder.
+
+A live dashboard tracks revenue at risk, revenue recovered, recovery rate, and successful interventions, plus a per-transaction agent log showing every decision the system made and why.
+
+## Project structure
 
 ```
-backend/                → Node.js/Express + MongoDB API, AI agent logic, guardrails
-  ├── NegotiatorX_API_Collection.json  → Postman collection, import directly
-  ├── docs/assets/architecture.png     → System architecture diagram
-  ├── services/prompts.js              → Isolated LLM prompt templates + agent persona/rules
-  ├── .eslintrc.json / .prettierrc     → Linting & formatting config
-  └── render.yaml                      → One-click Render deploy blueprint
-frontend/               → Dashboard (index.html) + real checkout page (checkout.html)
-  └── .eslintrc.json / .prettierrc     → Linting & formatting config
-SmartRecover_Pitch_Deck.pptx → 9-slide pitch deck
-NegotiatorX_Final_Implementation_Plan.md → Original planning document
+backend/
+  models/            Transaction, Invoice, WebhookEvent (Mongoose schemas)
+  routes/            orders, invoices, webhooks, metrics
+  services/
+    recoveryAgent.js     failure classification + recovery message drafting
+    negotiationAgent.js  risk scoring + negotiation message drafting
+    prompts.js           LLM prompt templates (isolated from business logic)
+    razorpayClient.js    Razorpay SDK instance
+  scripts/           seed data for demo purposes
+  server.js
+frontend/
+  index.html / app.js / style.css   main dashboard
+  checkout.html / checkout.js       real Razorpay checkout widget flow
 ```
 
-## Quick Start
+## Quick start
 
-1. `cd backend && npm install`
-2. Copy `.env.example` to `.env`, fill in your MongoDB + Razorpay Test Mode keys
-3. `npm run seed && npm run seed:invoices`
-4. `npm start`
-5. Open `frontend/index.html` in your browser — main dashboard
+```bash
+cd backend
+npm install
+cp .env.example .env      # fill in MongoDB + Razorpay test-mode keys
+npm run seed && npm run seed:invoices   # optional: populate sample data
+npm start
+```
 
-Full instructions: `backend/README.md`
-Demo script: `backend/DEMO_SCRIPT.md`
-Deployment guide: `backend/DEPLOYMENT.md`
-Submission write-up: `backend/SUBMISSION.md`
+Then open `frontend/index.html` in a browser. See `backend/README.md` for full setup, environment variables, and API reference.
 
-## Professional Polish Included
+## How payment status is verified
 
-- **Postman collection** (`backend/NegotiatorX_API_Collection.json`) — import into Postman to test every endpoint (orders, invoices, webhooks, metrics) without touching the UI
-- **Architecture diagram** (`backend/docs/assets/architecture.png`) — visual system map: Frontend → Express API → AI Agent Layer → Razorpay → MongoDB, with the full end-to-end data flow explained underneath
-- **Isolated prompt templates** (`backend/services/prompts.js`) — the agent's persona and hard financial guardrails (15% discount cap, no refund promises, no fabricated data) are defined once and reused across every LLM call, decoupled from business logic in `recoveryAgent.js` / `negotiationAgent.js`
-- **Lint/format configs** — `.eslintrc.json` + `.prettierrc` in both `backend/` and `frontend/`
-- **One-click deploy** — `render.yaml` blueprint plus deploy badges in `backend/README.md` (update the GitHub username placeholder once you push)
+A recovery payment is made through a Razorpay **Payment Link**, which is a separate object from the original order — Razorpay generates its own internal order for whatever is paid through the link. Because of that, the app checks status against the payment link itself (`razorpay.paymentLink.fetch`) rather than the original order, and stamps the original order ID into the payment link's `notes` so a Razorpay webhook (if configured) can also match it back correctly. This is also why polling the original order for payments will never show a recovery payment — it's by design in Razorpay's data model, not a bug in this app.
 
-## What's Real vs. What's Controlled 
+Two ways the app finds out a recovery payment succeeded:
+- **Manual check** — the "Check Payment Status" button calls the backend, which asks Razorpay directly whether the payment link has a captured payment. This works with no extra setup and is what the demo relies on.
+- **Webhook** — if you configure a Razorpay webhook pointing at `/api/webhooks/razorpay` (needs a publicly reachable URL, e.g. via a tunnel in local dev), the same update happens automatically when Razorpay calls back. Incoming webhook events are deduplicated at the database level, so Razorpay's automatic retries can't double-count a recovery.
 
-**Fully real, no simulation:**
-- Order creation, Checkout Widget-based recovery, Invoices — all real Razorpay Test Mode API calls
-- `checkout.html` — opens Razorpay's actual checkout widget; using test card `4000 0000 0000 0002` triggers a genuine decline and a real `payment.failed` webhook
-- Paying the recovery order (opened via the Checkout widget) with `4111 1111 1111 1111` triggers a real `payment.captured` webhook
-- All database updates happen from real webhook events when using the checkout flow
+## What's real vs. what's a demo control
 
-**Deliberately controlled (by design, not a shortcut):**
-- The dashboard's "Simulate Payment Failure" button — a manual trigger alternative to the real checkout, useful for timed demos or unstable Wi-Fi
-- The "Simulate Client Reply" button for B2B invoices — replaces real inbound email parsing, which is high-risk to demo live. The agent's decision logic downstream is identical either way.
+**Real, no simulation:**
+- Order creation, Payment Links, and Invoices are all live Razorpay Test Mode API calls.
+- Payment status is verified by asking Razorpay directly (payment link fetch), not assumed from a local state change.
+- `checkout.html` opens Razorpay's actual checkout widget end to end.
 
+**Deliberately manual, by design:**
+- "Simulate Payment Failure" — a manual trigger standing in for waiting on a real bank decline, so a failure can happen on cue.
+- "Simulate Client Reply" — a canned reply standing in for parsing a real inbound email. The negotiation logic downstream runs identically either way.
 
+## Guardrails
+
+- Negotiation discounts are capped at 15% in code — the agent can propose more based on risk, but the cap always wins, and an override is logged when it happens.
+- Invoices above ₹2,00,000 require manual approval before a partial-payment restructure is applied.
+- Every agent action (order created, failure classified, recovery link generated, payment recovered, invoice negotiated) is appended to a per-record audit log.
+- If no LLM API key is configured, recovery and negotiation messages fall back to fixed templates automatically — the core loop doesn't depend on an LLM being available.
+
+## Known limitations
+
+- Risk scoring is a deterministic formula (days overdue + invoice amount), not a learned model — this is a design choice for auditability, not a stand-in for one.
+- "Simulate Client Reply" uses a fixed set of canned responses rather than parsing free-text replies.
+- Real-time updates depend on either clicking "Check Payment Status" or having a webhook configured with a public URL — there's no polling loop running automatically in the background.
