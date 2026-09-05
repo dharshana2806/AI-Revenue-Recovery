@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <title>SmartRecover — AI Revenue Recovery</title>
 <link rel="stylesheet" href="style.css" />
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
 
@@ -57,7 +58,7 @@
     <div id="recoveryResult" class="recovery-result" style="display:none;">
       <h3>🤖 Agent Output</h3>
       <p id="recoveryMessage"></p>
-      <a id="recoveryLink" href="#" target="_blank" class="pay-link">Open Recovery Payment Link →</a>
+      <button id="btnOpenRecoveryCheckout" class="pay-link" style="border:none; cursor:pointer;">Open Recovery Checkout →</button>
       <p class="hint">Pay with Razorpay test card: <code>4111 1111 1111 1111</code>, any future expiry, any CVV</p>
       <button id="btnCheckStatus" style="margin-top:12px;">🔄 Check Payment Status</button>
       <p class="hint" id="checkStatusResult"></p>
