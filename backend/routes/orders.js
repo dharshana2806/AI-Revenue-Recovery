@@ -36,7 +36,7 @@ router.post('/', async (req, res) => {
     res.json({ order, transaction });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.error?.description || err.message || 'Unknown server error' });
   }
 });
 
@@ -69,7 +69,7 @@ router.post('/:orderId/simulate-failure', async (req, res) => {
     res.json({ transaction, classification });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.error?.description || err.message || 'Unknown server error' });
   }
 });
 
@@ -118,7 +118,7 @@ router.post('/:orderId/recover', async (req, res) => {
     res.json({ transaction, paymentLink, recoveryMessage });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.error?.description || err.message || 'Unknown server error' });
   }
 });
 
@@ -128,6 +128,13 @@ router.post('/:orderId/recover', async (req, res) => {
  * This is a legitimate fallback pattern for when webhooks can't reach
  * the server (e.g. local dev without a public tunnel) — it calls
  * Razorpay's real API, not a simulation, so the result is genuine.
+ *
+ * IMPORTANT: once a recovery link has been generated, the customer
+ * pays through a Payment Link, which Razorpay fulfils under a NEW
+ * order it creates internally — not the original :orderId. So once
+ * transaction.recoveryLinkId exists, we must check status on THAT
+ * payment link instead of re-polling the original (now-abandoned)
+ * order, or a real capture will never be found.
  */
 router.get('/:orderId/check-status', async (req, res) => {
   try {
@@ -135,49 +142,41 @@ router.get('/:orderId/check-status', async (req, res) => {
     const transaction = await Transaction.findOne({ razorpayOrderId: orderId });
     if (!transaction) return res.status(404).json({ error: 'Transaction not found' });
 
-    // Ask Razorpay directly: has this order actually been paid?
-    // Check the recovery Payment Link if one was created.
-let razorpayPayments = [];
-let capturedPayment = null;
+    let capturedPaymentId = null;
+    let razorpayPayments = [];
 
-if (transaction.recoveryLinkId) {
-  const link = await razorpay.paymentLink.fetch(transaction.recoveryLinkId);
+    if (transaction.recoveryLinkId) {
+      // A recovery link exists — check IT, not the original order.
+      // NOTE: the Payment Link entity's `payments` array uses the key
+      // `payment_id` (not `id`) and is only populated once a payment
+      // has actually been captured against that link.
+      const link = await razorpay.paymentLink.fetch(transaction.recoveryLinkId);
+      razorpayPayments = link.payments || [];
+      const captured = razorpayPayments.find((p) => p.status === 'captured');
+      capturedPaymentId = captured ? captured.payment_id : null;
+    } else {
+      // No recovery link yet — the original order is still the source of truth.
+      const payments = await razorpay.orders.fetchPayments(orderId);
+      razorpayPayments = payments.items;
+      const captured = razorpayPayments.find((p) => p.status === 'captured');
+      capturedPaymentId = captured ? captured.id : null;
+    }
 
-  razorpayPayments = link.payments || [];
-
-  if (link.status === 'paid') {
-    capturedPayment =
-      razorpayPayments.find((p) => p.status === 'captured') || {
-        id: null,
-        amount: link.amount_paid,
-      };
-  } else {
-    capturedPayment = razorpayPayments.find(
-      (p) => p.status === 'captured'
-    );
-  }
-} else {
-  const payments = await razorpay.orders.fetchPayments(orderId);
-  razorpayPayments = payments.items;
-  capturedPayment = razorpayPayments.find(
-    (p) => p.status === 'captured'
-  );
-}
-    if (capturedPayment && transaction.status !== 'recovered') {
+    if (capturedPaymentId && transaction.status !== 'recovered') {
       transaction.status = 'recovered';
-      transaction.recoveredPaymentId = capturedPayment.id || null;
+      transaction.recoveredPaymentId = capturedPaymentId;
       transaction.recoveredAt = new Date();
       transaction.agentLog.push({
         action: 'payment_recovered',
-        details: `[Manual status check] Payment ${capturedPayment.id} captured - ₹${(capturedPayment.amount / 100).toFixed(2)} recovered`,
+        details: `[Manual status check] Payment ${capturedPaymentId} captured - ₹${(transaction.amount / 100).toFixed(2)} recovered`,
       });
       await transaction.save();
     }
 
- res.json({ transaction, razorpayPayments });
+    res.json({ transaction, razorpayPayments });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.error?.description || err.message || 'Unknown server error' });
   }
 });
 
