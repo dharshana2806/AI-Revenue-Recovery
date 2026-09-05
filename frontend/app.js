@@ -1,8 +1,21 @@
 const API_BASE = 'https://ai-revenue-recovery-qm0v.onrender.com/api';
-
 let currentOrderId = null;
+let currentRecoveryOrder = null;
+let razorpayKeyId = null;
 
 const $ = (id) => document.getElementById(id);
+
+// Fetch the public Razorpay key once on load, needed to open Checkout
+async function fetchPublicKey() {
+  try {
+    const res = await fetch(`${API_BASE}/config`);
+    const data = await res.json();
+    razorpayKeyId = data.razorpayKeyId;
+  } catch (err) {
+    console.error('Could not fetch Razorpay public key:', err);
+  }
+}
+fetchPublicKey();
 
 async function loadMetrics() {
   const res = await fetch(`${API_BASE}/metrics`);
@@ -124,12 +137,38 @@ $('btnRecover').addEventListener('click', async () => {
     return;
   }
 
+  currentRecoveryOrder = data.recoveryOrder; // { id, amount, currency, ... }
   $('recoveryResult').style.display = 'block';
   $('recoveryMessage').textContent = data.recoveryMessage;
-  $('recoveryLink').href = data.paymentLink.short_url;
   $('checkStatusResult').textContent = '';
 
   await refreshAll();
+});
+
+$('btnOpenRecoveryCheckout').addEventListener('click', () => {
+  if (!currentRecoveryOrder || !razorpayKeyId) {
+    alert('Recovery order not ready yet, or Razorpay key failed to load — check the backend is running.');
+    return;
+  }
+
+  // Opens Razorpay's real Checkout widget for the recovery order —
+  // using the Orders API here (not Payment Links) sidesteps Razorpay's
+  // 30-lifetime-link cap on unverified test accounts.
+  const options = {
+    key: razorpayKeyId,
+    amount: currentRecoveryOrder.amount,
+    currency: currentRecoveryOrder.currency,
+    order_id: currentRecoveryOrder.id,
+    name: 'SmartRecover — Recovery Payment',
+    description: 'Completing your recovered payment',
+    handler: function (response) {
+      alert('Payment succeeded! payment_id: ' + response.razorpay_payment_id);
+    },
+    theme: { color: '#7c5cff' },
+  };
+
+  const rzp = new Razorpay(options);
+  rzp.open();
 });
 
 $('btnCheckStatus').addEventListener('click', async () => {
