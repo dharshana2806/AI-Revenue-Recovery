@@ -25,6 +25,7 @@ const transactionSchema = new mongoose.Schema(
 
     recoveryLinkId: { type: String, default: null },
     recoveryLinkUrl: { type: String, default: null },
+    recoveryOrderId: { type: String, default: null }, // fresh Razorpay Order for recovery (Checkout widget)
     recoveryMessage: { type: String, default: null }, // AI-generated text
 
     recoveredPaymentId: { type: String, default: null },
@@ -39,7 +40,7 @@ const transactionSchema = new mongoose.Schema(
       },
     ],
   },
-  { timestamps: true }
+  { timestamps: true 
 );
 
 module.exports = mongoose.model('Transaction', transactionSchema);
