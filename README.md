@@ -39,9 +39,9 @@ Submission write-up: `backend/SUBMISSION.md`
 ## What's Real vs. What's Controlled (be honest with judges about this)
 
 **Fully real, no simulation:**
-- Order creation, Payment Links, Invoices — all real Razorpay Test Mode API calls
+- Order creation, Checkout Widget-based recovery, Invoices — all real Razorpay Test Mode API calls
 - `checkout.html` — opens Razorpay's actual checkout widget; using test card `4000 0000 0000 0002` triggers a genuine decline and a real `payment.failed` webhook
-- Paying the recovery link with `4111 1111 1111 1111` triggers a real `payment.captured` webhook
+- Paying the recovery order (opened via the Checkout widget) with `4111 1111 1111 1111` triggers a real `payment.captured` webhook
 - All database updates happen from real webhook events when using the checkout flow
 
 **Deliberately controlled (by design, not a shortcut):**

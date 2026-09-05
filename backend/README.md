@@ -10,8 +10,8 @@ AI-powered failed-payment recovery loop — Razorpay AI Buildathon, Track 3.
 ## What this does
 1. Creates a Razorpay test-mode Order
 2. Lets you manually simulate a payment failure (demo-safe, no waiting on real banks)
-3. An "AI agent" classifies the failure and generates a recovery Payment Link + message
-4. When the customer pays via the link, Razorpay's webhook flips the transaction to "recovered"
+3. An "AI agent" classifies the failure and generates a fresh recovery Order (opened via Razorpay's Checkout widget) + message
+4. When the customer pays via the Checkout widget popup, Razorpay's webhook flips the transaction to "recovered"
 5. `/api/metrics` powers your dashboard's 4 headline numbers
 
 ## Two ways to trigger a payment failure
@@ -22,7 +22,7 @@ Open `checkout.html` in the frontend. It creates a real order and opens Razorpay
 **Option B — Manual trigger (demo-safety fallback):**
 The `/api/orders/:id/simulate-failure` endpoint / the dashboard's "Simulate Payment Failure" button. Useful if you want the failure to happen on cue during a timed pitch, or if you're demoing without a stable internet connection to reach Razorpay's checkout widget.
 
-Both paths lead to the exact same downstream agent logic (classification → recovery link → recovery message) — the only difference is what triggers it.
+Both paths lead to the exact same downstream agent logic (classification → recovery order → recovery message) — the only difference is what triggers it.
 
 ## Setup (do this first — Hour 0-2 of the roadmap)
 
@@ -77,7 +77,9 @@ curl -X POST http://localhost:5000/api/orders/<ORDER_ID>/simulate-failure \
 # 3. Trigger the AI recovery agent
 curl -X POST http://localhost:5000/api/orders/<ORDER_ID>/recover
 
-# This returns a recoveryLinkUrl - open it in a browser and pay using
+# This returns a recoveryOrder object (id, amount, currency) - open the
+# Razorpay Checkout widget with that order id (as the frontend does), or
+# open frontend/index.html and click through the demo flow, and pay using
 # Razorpay's test success card: 4111 1111 1111 1111, any future expiry, any CVV.
 
 # 4. Check metrics after paying
@@ -92,7 +94,7 @@ If step 4 shows the transaction moved to "recovered" and the metrics updated —
 |---|---|---|
 | POST | `/api/orders` | Create a Razorpay order + transaction record |
 | POST | `/api/orders/:orderId/simulate-failure` | Manually trigger a failure (demo control button) |
-| POST | `/api/orders/:orderId/recover` | AI agent generates recovery link + message |
+| POST | `/api/orders/:orderId/recover` | AI agent generates recovery order + message |
 | GET | `/api/orders` | List all transactions (for dashboard table) |
 | GET | `/api/metrics` | Revenue at risk / recovered / recovery rate |
 | POST | `/api/webhooks/razorpay` | Razorpay calls this on payment events |
