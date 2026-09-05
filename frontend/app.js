@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = 'https://ai-revenue-recovery-qm0v.onrender.com/api';
 
 let currentOrderId = null;
 
