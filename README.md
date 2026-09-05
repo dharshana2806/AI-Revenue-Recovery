@@ -21,7 +21,6 @@ NegotiatorX_Final_Implementation_Plan.md → Original planning document
 3. `npm run seed && npm run seed:invoices`
 4. `npm start`
 5. Open `frontend/index.html` in your browser — main dashboard
-6. Open `frontend/checkout.html` for the fully-real Razorpay checkout flow
 
 Full instructions: `backend/README.md`
 Demo script: `backend/DEMO_SCRIPT.md`
@@ -36,7 +35,7 @@ Submission write-up: `backend/SUBMISSION.md`
 - **Lint/format configs** — `.eslintrc.json` + `.prettierrc` in both `backend/` and `frontend/`
 - **One-click deploy** — `render.yaml` blueprint plus deploy badges in `backend/README.md` (update the GitHub username placeholder once you push)
 
-## What's Real vs. What's Controlled (be honest with judges about this)
+## What's Real vs. What's Controlled 
 
 **Fully real, no simulation:**
 - Order creation, Checkout Widget-based recovery, Invoices — all real Razorpay Test Mode API calls
@@ -48,8 +47,4 @@ Submission write-up: `backend/SUBMISSION.md`
 - The dashboard's "Simulate Payment Failure" button — a manual trigger alternative to the real checkout, useful for timed demos or unstable Wi-Fi
 - The "Simulate Client Reply" button for B2B invoices — replaces real inbound email parsing, which is high-risk to demo live. The agent's decision logic downstream is identical either way.
 
-If a judge asks "is this real," you can honestly say: yes — the payment recovery loop is a real Razorpay integration end to end; the demo control buttons exist to make the timing and reliability of a live presentation predictable, which is standard hackathon practice.
 
-## Recommended: run `checkout.html` for judges
-
-For the strongest possible demo, use the real checkout flow (`checkout.html`) instead of the simulate button when presenting — it proves the entire loop is genuine with zero simulation, and Razorpay's test cards make both failure and success fully reproducible on demand.
