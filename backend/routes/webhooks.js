@@ -60,7 +60,12 @@ router.post('/razorpay', async (req, res) => {
       // --- End idempotency gate — safe to process below ---
 
       const orderId = payment.order_id;
-      const transaction = await Transaction.findOne({ razorpayOrderId: orderId });
+      // A recovery payment's order_id is the fresh recoveryOrder created
+      // in /recover, not the original razorpayOrderId — so we must check
+      // both fields, same as check-status already does.
+      const transaction = await Transaction.findOne({
+        $or: [{ razorpayOrderId: orderId }, { recoveryOrderId: orderId }],
+      });
 
       if (transaction && event === 'payment.captured') {
         transaction.status = 'recovered';
